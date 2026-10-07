@@ -1,0 +1,319 @@
+{
+  "name": "Lead Capture Hubspot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-enrichment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2128cbc2-b21a-4f70-aa1e-e85315025323",
+      "name": "Webhook",
+      "webhookId": "946c3433-001e-499a-b506-0ecbb9cab8e2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2dd15e7e-f907-4e53-b601-feeb49ed6dc0",
+              "name": "name",
+              "value": "={{ $json.body.name }}",
+              "type": "string"
+            },
+            {
+              "id": "56fff200-b247-4911-8532-70fca73de385",
+              "name": "company",
+              "value": "={{ $json.body.company }}",
+              "type": "string"
+            },
+            {
+              "id": "2a1911a3-98e4-4b34-8237-10afb8244c79",
+              "name": "message",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "e65a4ca6-07fb-499e-968e-d32b874f1d1d",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "efef22ed-a6df-413e-9c91-c58916bcc6bb",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3e62f98e-043a-409f-acfc-eff175f4bb6a",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "469b5e76-937c-4bb5-b288-1606e67a9505",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"received\", \"name\": $json.name, \"company\": $json.company } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "3fac0155-8fb3-417e-8aed-9b9f9abcfede",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Company: {{ $json.company }}\nContact name: {{ $json.name }}\nMessage: {{ $json.message }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a B2B sales research assistant. Given a company name and a lead's message, return ONLY a valid JSON object with these keys: industry, company_size_estimate, summary, outreach_hook, lead_score (1 to 10). No markdown, no code fences, no extra text. If you are not sure about something, use \"unknown\" instead of guessing."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        960,
+        -240
+      ],
+      "id": "6c86174c-ddaf-46f4-8621-2fbc7205bb19",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "model": "nvidia/nemotron-3.5-lightning:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        960,
+        0
+      ],
+      "id": "93d5d072-3d28-46a8-bbcb-07842a629cd8",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "ZKf2Gs4YnDNoGslM",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.text || '';\nconst clean = raw.replace(/```json|```/g, '').trim();\n\nlet data = {};\nlet parseOk = true;\ntry {\n  data = JSON.parse(clean);\n} catch (e) {\n  parseOk = false;\n}\n\nconst lead = $('Edit Fields').first().json;\n\nreturn [{\n  json: {\n    name: lead.name,\n    email: lead.email,\n    company: lead.company,\n    message: lead.message,\n    industry: data.industry || 'unknown',\n    company_size_estimate: data.company_size_estimate || 'unknown',\n    summary: data.summary || 'unknown',\n    outreach_hook: data.outreach_hook || 'unknown',\n    lead_score: Number(data.lead_score) || 0,\n    parse_ok: parseOk\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        192
+      ],
+      "id": "0fa0e33b-beb5-4eab-b837-7f7bbb8a7c5f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "tableId": "enriched_leads",
+        "dataToSend": "autoMapInputData"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        656,
+        192
+      ],
+      "id": "a62bff2b-a136-4267-bb0c-96ac0db173e7",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "dFcU2yUXhJZY0KSr",
+          "name": "Supabase lead-pipeline"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "email": "={{ $('Create a row').item.json.email }}",
+        "additionalFields": {
+          "companyName": "={{ $('Code in JavaScript').item.json.company }}",
+          "firstName": "={{ $('Code in JavaScript').item.json.name }}",
+          "message": "=AI summary: {{ $('Code in JavaScript').item.json.summary }}\nOutreach hook: {{ $('Code in JavaScript').item.json.outreach_hook }}\nLead score: {{ $('Code in JavaScript').item.json.lead_score }}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        192
+      ],
+      "id": "5d78f517-8601-478b-9462-fbad3e01ad74",
+      "name": "Create or update a contact",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "UdpqtFlqVpHw5oMt",
+          "name": "HubSpot account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Create or update a contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2089d633-5483-44c8-a05d-31a86d71a5de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ecaeb7af10840ea42a47d10c1d65a9d06e8fb0626832f186215630309e76cb44"
+  },
+  "nodeGroups": [],
+  "id": "vVi9Hv5sHQmHNwTy",
+  "tags": []
+}
