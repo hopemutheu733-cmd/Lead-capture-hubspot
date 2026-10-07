@@ -2,7 +2,8 @@
 
 An n8n workflow that receives lead submissions, enriches them with AI, saves them to Supabase, and creates or updates a HubSpot contact.
 
-<img width="600" height="270" alt="lead capture hubspot 3" src="https://github.com/user-attachments/assets/d42c64bc-0a5e-49c7-b02d-b9adb255dc47" />
+<img width="600" height="200" alt="LEAD CAPTURE HUBSPOT 3 5" src="https://github.com/user-attachments/assets/976b9b82-50cd-4f6a-9db2-52ad741db6ab" />
+
 
 ## How it works
 
